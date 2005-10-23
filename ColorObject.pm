@@ -1,19 +1,14 @@
 package Graphics::ColorObject;
 
-# Copyright 2003-2004 by Alex Izvorski
+# Copyright 2003-2005 by Alex Izvorski
 
 # Portions Copyright 2001-2003 by Alfred Reibenschuh
 
-# $Id: ColorObject.pm,v 1.7 2004/03/09 01:05:32 ai Exp $
+# $Id: ColorObject.pm,v 1.12 2005/07/19 10:11:47 ai Exp $
 
 =head1 NAME
 
 Graphics::ColorObject - convert between color spaces
-
-
-=head1 UPGRADING FROM 0.3a2 AND OLDER VERSIONS
-
-This version is a complete rewrite since the previous version, 0.3a2. The API is completely changed.  The old API should be emulated, but that has not been tested as extensively as I'd like. Therefore, please test any code that uses this module when upgrading. If you encounter any strange behavior, please downgrade to 0.3a2 and email me a bug report.  Additionally, the exact values returned by some functions may be slightly different, this is not a bug - the new values are (more) correct.  
 
 
 =head1 SYNOPSIS
@@ -31,16 +26,16 @@ This version is a complete rewrite since the previous version, 0.3a2. The API is
 
 =head1 ABSTRACT
 
-Use this module to convert between all the common color spaces.  As a pure Perl module, it is not very fast, and so it you want to convert entire images, this is probably not what you want.  The emphasis is on completeness and accurate conversion.
+Use this module to convert between all the common color spaces.  As a pure Perl module, it is not very fast, and so it you want to convert entire images quickly, this is probably not what you want.  The emphasis is on completeness and accurate conversion.
 
-Supported color spaces are: RGB (including sRGB, Rec 601, Rec 709, ITU, and about a dozen other RGB spaces), CMY, CMYK, HSL, HSV, XYZ, xyY, Lab, LCHab, Luv, LCHuv, YPbPr, YCbCr.  Future support is planned for YUV, YIQ, YCC and possibly others.
+Supported color spaces are: RGB (including sRGB, Apple, Adobe, CIE Rec 601, CIE Rec 709, CIE ITU, and about a dozen other RGB spaces), CMY, CMYK, HSL, HSV, XYZ, xyY, Lab, LCHab, Luv, LCHuv, YPbPr, YCbCr, YUV, YIQ, PhotoYCC.
 
 Conversion between different RGB working spaces, and between different white-points, is fully supported.
 
 
 =head1 DESCRIPTION
 
-For any supported color space XXX, there is one constructor new_XXX that creates a color using data in that color space, and one method as_XXX that returns the current color as expressed in that color space.  For example, for RGB there is new_RGB and as_RGB.  The color data is always passed as an array reference to a three-element array.  Thus, to convert from RGB to HSL, you can use:
+For any supported color space XXX, there is one constructor new_XXX that creates a color using data in that color space, and one method as_XXX that returns the current color as expressed in that color space.  For example, for RGB there is new_RGB and as_RGB.  The color data is always passed as an array reference to a three-element array (four-element in the case of CMYK).  Thus, to convert from RGB to HSL, you can use:
 
   $color = Graphics::ColorObject->new_RGB([$r, $g, $b]);
   ($h, $s, $l) = @{ $color->as_HSL() };
@@ -49,13 +44,46 @@ The constructor can always take a hash of optional arguments in addition to the 
 
   $color = Graphics::ColorObject->new_RGB([$r, $g, $b], space=>'Adobe', white_point=>'D65');
 
-For a list of all RGB working spaces and of all white points that this module supports, call Graphics::ColorObject->list_rgb_spaces() and Graphics::ColorObject->list_white_points().  If not specified, the working RGB space will be sRGB, and operations that default to using that will print a warning.
+For a list of all supported color spaces, call Graphics::ColorObject->list_colorspaces().  For a list of all RGB working spaces and of all white points that this module supports, call Graphics::ColorObject->list_rgb_spaces() and Graphics::ColorObject->list_white_points().
 
-Most conversions will return out-of-gamut values if necessary, because that way they are lossless and can be chained in calculations, or reversed to produce the original values.  At present there is no way to check whether a value is within gamut for a particular space; that feature may be added in the future.  (An RGB value is within gamut simply if R, G and B are between 0 and 1, but other spaces can be much harder to check.)
+If not specified, the working RGB space will be sRGB.  Many non-RGB conversions also rely on an implicit RGB space, and passing an RGB space as an option (either to the constructor or later) will have an effect on the values.
 
-RGB values are non-linear (i.e. gamma-adjusted) floating-point values scaled in the range from 0 to 1.  If you want integer values in the range 0..255, use the RGB255 functions instead.
 
-Functions that use an angle value always express it in degrees.  That includes the hue H in HSL, HSV, LCHab and LCHuv.  Use rad2deg and deg2rad from Math::Trig to convert to/from degrees if necessary.
+=head1 VARIOUS NOTES AND GOTCHAS
+
+Most conversions will return out-of-gamut values if necessary, because that way they are lossless and can be chained in calculations, or reversed to produce the original values.  Many conversion methods will take an optional boolean "clip" parameter to restrict the returned values to be within gamut:
+
+  ($r, $g, $b) = @{ $color->as_RGB(space=>'sRGB', clip=>1) };
+
+Currently clipping is supported in RGB, RGB-derived (HSL, CMY) and chroma-luma separated (YUV, etc) spaces, but not in XYZ-derived spaces.  The only way to check whether a value is within gamut is to convert it with and without the clip option and compare the two results.  An RGB value is within gamut simply if R, G and B are between 0 and 1, but other spaces can be much harder to check.
+
+RGB values are non-linear (gamma-adjusted) floating-point values scaled in the range from 0 to 1.  If you want integer values in the range 0..255, use the new_RGB255/as_RGB255 functions instead.  If you want linear RGB (not gamma-adjusted) use RGB_to_linear_RGB([$r, $g, $b]).
+
+Functions that use an angle value always express it in degrees from 0 to 360.  That includes the hue H in HSL, HSV, LCHab and LCHuv.  Use rad2deg and deg2rad from Math::Trig to convert to/from degrees if necessary.
+
+There is some confusion in the naming of YUV and related (Y-something-something) colorspaces.  Most of the time when "YUV" or "YCC" is used in software, for example in JPEG and MPEG2, that is actually YCbCr, a chroma-luma separated space with integer values of Y in the range [16..235], Cb and Cr in [16..240].  JPEG uses a modified YCbCr with values in [0..255] (which is not implemented in this module).  As used here, YUV is a floating-point representation of the analog signal in PAL TV, YIQ is the same for NTSC TV, YPbPr is component analog video, and PhotoYCC or YCC is the Kodak PhotoCD standard.
+
+The set_white_point() function can take arbitrary temperatures as well as the predefined standard illuminants.  The valid range of temperatures is from 4000K to 25000K.
+
+
+=head1 RECOMMENDATIONS
+
+Aside from converting from one space to another, what colorspace is the best one to use for a particular task?  This section attempts to answer that question.
+
+For "generic" RGB values, use sRGB (which is the default).
+
+For 2D effects filters, use Lab (or LCHab).
+
+For adjustment of brightness, saturation and hue, use LCHab or LSHab.
+
+For compression, use YCbCr, or use YPbPr and convert to integer values in a way that makes sense in your application.
+
+For representing data as colors, use Lab (straight lines between points in Lab are more-or-less uniform gradients, unlike straight lines in RGB, for example).
+
+
+=head1 UPGRADING FROM 0.3a2 AND OLDER VERSIONS
+
+Version 0.4 and later are a complete rewrite from the previous major version, 0.3a2. The API is completely changed.  The old API should be emulated exactly in all cases.  Please test any code that uses this module when upgrading. If you encounter any strange behavior, please downgrade to 0.3a2 and email me a bug report.  Additionally, the exact values returned by some functions may be slightly different, this is not a bug - the new values are (more) correct.  
 
 
 =head1 METHODS
@@ -103,7 +131,7 @@ our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 
 our @EXPORT = qw();
 
-our $VERSION = '0.4a4';
+our $VERSION = '0.5.0';
 
 use Carp;
 use POSIX qw(pow);
@@ -139,7 +167,6 @@ sub new
 }
 
 =head2 $color = Graphics::ColorObject->new_XYZ([$X, $Y, $Z])
-
 =cut 
 
 sub new_XYZ
@@ -151,7 +178,6 @@ sub new_XYZ
 }
 
 =head2 $color = Graphics::ColorObject->new_xyY([$x, $y, $Y])
-
 =cut 
 
 sub new_xyY
@@ -163,7 +189,6 @@ sub new_xyY
 }
 
 =head2 $color = Graphics::ColorObject->new_RGB([$R, $G, $B])
-
 =cut 
 
 sub new_RGB
@@ -175,7 +200,6 @@ sub new_RGB
 }
 
 =head2 $color = Graphics::ColorObject->new_RGB255([$R, $G, $B])
-
 =cut 
 
 sub new_RGB255
@@ -185,7 +209,6 @@ sub new_RGB255
 }
 
 =head2 $color = Graphics::ColorObject->new_RGBhex($rgbhex)
-
 =cut 
 
 sub new_RGBhex
@@ -195,7 +218,6 @@ sub new_RGBhex
 }
 
 =head2 $color = Graphics::ColorObject->new_Lab([$L, $a, $b])
-
 =cut 
 
 sub new_Lab
@@ -207,7 +229,6 @@ sub new_Lab
 }
 
 =head2 $color = Graphics::ColorObject->new_LCHab([$L, $C, $H])
-
 =cut 
 
 sub new_LCHab
@@ -219,7 +240,6 @@ sub new_LCHab
 }
 
 =head2 $color = Graphics::ColorObject->new_Luv([$L, $u, $v])
-
 =cut 
 
 sub new_Luv
@@ -231,7 +251,6 @@ sub new_Luv
 }
 
 =head2 $color = Graphics::ColorObject->new_LCHuv([$L, $C, $H])
-
 =cut 
 
 sub new_LCHuv
@@ -243,7 +262,6 @@ sub new_LCHuv
 }
 
 =head2 $color = Graphics::ColorObject->new_HSL([$H, $S, $L])
-
 =cut 
 
 sub new_HSL
@@ -253,7 +271,6 @@ sub new_HSL
 }
 
 =head2 $color = Graphics::ColorObject->new_HSV([$H, $S, $V])
-
 =cut 
 
 sub new_HSV
@@ -263,7 +280,6 @@ sub new_HSV
 }
 
 =head2 $color = Graphics::ColorObject->new_CMY([$C, $M, $Y])
-
 =cut 
 
 sub new_CMY
@@ -273,7 +289,6 @@ sub new_CMY
 }
 
 =head2 $color = Graphics::ColorObject->new_CMYK([$C, $M, $Y])
-
 =cut 
 
 sub new_CMYK
@@ -283,7 +298,6 @@ sub new_CMYK
 }
 
 =head2 $color = Graphics::ColorObject->new_YPbPr([$Y, $Pb, $Pr])
-
 =cut 
 
 sub new_YPbPr
@@ -293,7 +307,6 @@ sub new_YPbPr
 }
 
 =head2 $color = Graphics::ColorObject->new_YCbCr([$Y, $Cb, $Cr])
-
 =cut 
 
 sub new_YCbCr
@@ -302,185 +315,226 @@ sub new_YCbCr
 	return &new_RGB($pkgname, &YCbCr_to_RGB($ycbcr), space => 'NTSC'); # force NTSC
 }
 
-=head2 ($X, $Y, $Z) = @{ $color->as_XYZ() }
+=head2 $color = Graphics::ColorObject->new_YUV([$Y, $Cb, $Cr])
+=cut 
 
+sub new_YUV
+{
+	my ($pkgname, $yuv, %opts) = @_;
+	return &new_RGB($pkgname, &YUV_to_RGB($yuv), space => 'NTSC'); # force NTSC
+}
+
+=head2 $color = Graphics::ColorObject->new_YIQ([$Y, $I, $Q])
+=cut 
+
+sub new_YIQ
+{
+	my ($pkgname, $yiq, %opts) = @_;
+	return &new_RGB($pkgname, &YIQ_to_RGB($yiq), space => 'NTSC'); # force NTSC
+}
+
+=head2 $color = Graphics::ColorObject->new_PhotoYCC([$Y, $C1, $C2])
+=cut 
+
+sub new_PhotoYCC
+{
+	my ($pkgname, $ycc, %opts) = @_;
+	return &new_RGB($pkgname, &PhotoYCC_to_RGB($ycc), space => 'sRGB'); # force sRGB
+}
+
+=head2 ($X, $Y, $Z) = @{ $color->as_XYZ() }
 =cut 
 
 sub as_XYZ
 {
-	my ($this) = @_;
-	return $this->{xyz};
+	my ($this, %opts) = @_;
+	my $xyz = $this->{xyz};
+	if ($opts{clip})
+	{
+		# TODO check this is correct
+		my ($Xw, $Yw, $Zw) = @{ $this->get_XYZ_white() };
+		$xyz = &_generic_clip($xyz, [[0,$Xw], [0,$Yw], [0,$Zw]]);
+	}
+	return $xyz;
 }
 
 =head2 ($R, $G, $B) = @{ $color->as_RGB() }
-
 =cut 
 
 sub as_RGB
 {
 	my ($this, %opts) = @_;
 	my $space = $opts{space} || $this->{space};
-	return &XYZ_to_RGB($this->{xyz}, $space);
+	my $rgb = &XYZ_to_RGB($this->{xyz}, $space);
+	if ($opts{clip}) { $rgb = &_generic_clip($rgb, [[0,1], [0,1], [0,1]]); };
+	return $rgb;
 }
 
 =head2 ($R, $G, $B) = @{ $color->as_RGB255() }
-
 =cut 
 
 sub as_RGB255
 {
 	my ($this) = @_;
+	# always clipped
 	return &RGB_to_RGB255($this->as_RGB());
 }
 
 =head2 $hex = $color->as_RGBhex()
-
 =cut 
 
 sub as_RGBhex
 {
 	my ($this) = @_;
+	# always clipped
 	return &RGB_to_RGBhex($this->as_RGB());
 }
 
 =head2 ($x, $y, $Y) = @{ $color->as_xyY() }
-
 =cut 
 
 sub as_xyY
 {
-	my ($this) = @_;
-	return &XYZ_to_xyY($this->{xyz}, $this->get_XYZ_white());
+	my ($this, %opts) = @_;
+	my $xyy = &XYZ_to_xyY($this->{xyz}, $this->get_XYZ_white());
+	return $xyy;
 }
 
 =head2 ($L, $a, $b) = @{ $color->as_Lab() }
-
 =cut 
 
 sub as_Lab
 {
 	my ($this) = @_;
-	return &XYZ_to_Lab($this->{xyz}, $this->get_XYZ_white());
+	my $lab = &XYZ_to_Lab($this->{xyz}, $this->get_XYZ_white());
+	return $lab;
 }
 
 =head2 ($L, $C, $H) = @{ $color->as_LCHab() }
-
 =cut 
 
 sub as_LCHab
 {
 	my ($this) = @_;
-	return &Lab_to_LCHab( &XYZ_to_Lab($this->{xyz}, $this->get_XYZ_white()) );
+	my $lchab = &Lab_to_LCHab( &XYZ_to_Lab($this->{xyz}, $this->get_XYZ_white()) );
+	return $lchab;
 }
 
 =head2 ($L, $u, $v) = @{ $color->as_Luv() }
-
 =cut 
 
 sub as_Luv
 {
 	my ($this) = @_;
-	return &XYZ_to_Luv($this->{xyz}, $this->get_XYZ_white());
+	my $luv = &XYZ_to_Luv($this->{xyz}, $this->get_XYZ_white());
+	return $luv;
 }
 
 =head2 ($L, $C, $H) = @{ $color->as_LCHuv() }
-
 =cut 
 
 sub as_LCHuv
 {
 	my ($this) = @_;
-	return &Luv_to_LCHuv( &XYZ_to_Luv($this->{xyz}, $this->get_XYZ_white()) );
+	my $lchuv = &Luv_to_LCHuv( &XYZ_to_Luv($this->{xyz}, $this->get_XYZ_white()) );
+	return $lchuv;
 }
 
 =head2 ($H, $S, $L) = @{ $color->as_HSL() }
-
 =cut 
 
 sub as_HSL
 {
-	my ($this) = @_;
-	return &RGB_to_HSL( $this->as_RGB() );
+	my ($this, %opts) = @_;
+	my $hsl = &RGB_to_HSL( $this->as_RGB() );
+	if ($opts{clip}) { $hsl = &_generic_clip($hsl, [[0,360], [0,1], [0,1]]); };
+	return $hsl;
 }
 
 =head2 ($H, $S, $V) = @{ $color->as_HSV() }
-
 =cut 
 
 sub as_HSV
 {
-	my ($this) = @_;
-	return &RGB_to_HSV( $this->as_RGB() );
+	my ($this, %opts) = @_;
+	my $hsv = &RGB_to_HSV( $this->as_RGB() );
+	if ($opts{clip}) { $hsv = &_generic_clip($hsv, [[0,360], [0,1], [0,1]]); };
+	return $hsv;
 }
 
 =head2 ($C, $M, $Y) = @{ $color->as_CMY() }
-
 =cut 
 
 sub as_CMY
 {
-	my ($this) = @_;
-	return &RGB_to_CMY( $this->as_RGB() );
+	my ($this, %opts) = @_;
+	my $cmy = &RGB_to_CMY( $this->as_RGB() );
+	if ($opts{clip}) { $cmy = &_generic_clip($cmy, [[0,1], [0,1], [0,1]]); };
+	return $cmy;
 }
 
 =head2 ($C, $M, $Y, $K) = @{ $color->as_CMYK() }
-
 =cut 
 
 sub as_CMYK
 {
 	my ($this) = @_;
-	return &CMY_to_CMYK( &RGB_to_CMY( $this->as_RGB() ) );
+	my $cmyk = &CMY_to_CMYK( &RGB_to_CMY( $this->as_RGB() ) );
+	# TODO clip
+	return $cmyk;
 }
 
 =head2 ($Y, $Pb, $Pr) = @{ $color->as_YPbPr() }
-
 =cut 
 
 sub as_YPbPr
 {
-	my ($this) = @_;
-	return &RGB_to_YPbPr( $this->as_RGB( space => 'NTSC' ) );
+	my ($this, %opts) = @_;
+	my $ypbpr = &RGB_to_YPbPr( $this->as_RGB( space => 'NTSC' ) );
+	if ($opts{clip}) { $ypbpr = &_generic_clip($ypbpr, [[0,1], [-0.5,0.5], [-0.5,0.5]]); };
+	return $ypbpr;
 }
 
 =head2 ($Y, $Cb, $Cr) = @{ $color->as_YCbCr() }
-
 =cut 
 
 sub as_YCbCr
 {
-	my ($this) = @_;
-	return &RGB_to_YCbCr( $this->as_RGB( space => 'NTSC' ) );
+	my ($this, %opts) = @_;
+	my $ycbcr = &RGB_to_YCbCr( $this->as_RGB( space => 'NTSC' ) );
+	if ($opts{clip}) { $ycbcr = &_generic_clip($ycbcr, [[16,235], [16,239], [16,239]]); };
+	# TODO round to integers
+	return $ycbcr;
 }
 
-=head2 ($Y, $C1, $C2) = @{ $color->as_YCC() } UNIMPLEMENTED
-
-=cut 
-
-sub as_YCC
-{
-	# TODO
-	croak('conversion to/from this color space not yet implemented');
-}
-
-=head2 ($Y, $U, $V) = @{ $color->as_YUV() } UNIMPLEMENTED
-
+=head2 ($Y, $U, $V) = @{ $color->as_YUV() }
 =cut 
 
 sub as_YUV
 {
-	# TODO
-	croak('conversion to/from this color space not yet implemented');
+	my ($this) = @_;
+	my $yuv = &RGB_to_YUV( $this->as_RGB( space => 'NTSC' ) );
+	return $yuv;
 }
 
-=head2 ($Y, $I, $Q) = @{ $color->as_YIQ() } UNIMPLEMENTED
-
+=head2 ($Y, $I, $Q) = @{ $color->as_YIQ() }
 =cut 
 
 sub as_YIQ
 {
-	# TODO
-	croak('conversion to/from this color space not yet implemented');
+	my ($this) = @_;
+	my $yiq = &RGB_to_YIQ( $this->as_RGB( space => 'NTSC' ) );
+	return $yiq;
+}
+
+=head2 ($Y, $C1, $C2) = @{ $color->as_PhotoYCC() }
+=cut 
+
+sub as_PhotoYCC
+{
+	my ($this) = @_;
+	my $ycc = &RGB_to_PhotoYCC( $this->as_RGB( space => 'sRGB' ) );
+	return $ycc;
 }
 
 # returns the XYZ value of the white point actually used (always defined, default is D65)
@@ -499,6 +553,10 @@ sub get_XYZ_white
 	#return &RGB_to_XYZ([1, 1, 1], $this->{space});
 }
 
+=head2 $white_point = $color->get_white_point()
+Returns the name of the current white point.  Value is one of the entries returned from list_white_points, such as "D65", or a color temperature.
+=cut 
+
 # returns the name of the white point actually used
 # FIXME should be always defined
 sub get_white_point
@@ -507,25 +565,9 @@ sub get_white_point
 	return $this->{white_point};
 }
 
-# returns the name of the rgb space actually used
-# FIXME should be always defined
-sub get_rgb_space
-{
-	my ($this) = @_;
-	return $this->{space};
-}
-
-sub set_rgb_space
-{
-	my ($this, $space) = @_;
-	my $s = &_get_RGB_space_by_name($space);
-	if ($this->get_white_point() ne $s->{white_point})
-	{
-		$this->set_white_point($s->{white_point});
-	}
-	$this->{space} = $space;
-	return $this;
-}
+=head2  $color->set_white_point("D65")
+Sets the current white point by name.  Argument is one of the entries returned from list_white_points, or a temperature value like "6800K".  This changes the current color slightly since white-point adaptation is not completely reversible.  This does not affect the current RGB space, thus it is possible to use RGB spaces at whitepoints other than those they were defined at.
+=cut 
 
 sub set_white_point
 {
@@ -542,6 +584,37 @@ sub set_white_point
 	return $this;
 }
 
+=head2 $rgb_space = $color->get_rgb_space()
+Returns the name of the current RGB color space.  Value is one of the entries returned from list_rgb_spaces, such as "NTSC".
+=cut 
+
+# FIXME should be always defined
+sub get_rgb_space
+{
+	my ($this) = @_;
+	return $this->{space};
+}
+
+=head2  $color->set_rgb_space("NTSC")
+Sets the current RGB color space by name.  Argument is one of the entries returned from list_rgb_spaces.  This may change the current color if the old and new spaces have different white points.
+=cut 
+
+sub set_rgb_space
+{
+	my ($this, $space) = @_;
+	my $s = &_get_RGB_space_by_name($space);
+	if ($this->get_white_point() ne $s->{white_point})
+	{
+		$this->set_white_point($s->{white_point});
+	}
+	$this->{space} = $space;
+	return $this;
+}
+
+=head2  $color2 = $color->copy()
+Creates an exact duplicate of the current color.
+=cut 
+
 sub copy
 {
 	my ($this) = @_;
@@ -554,6 +627,11 @@ sub copy
 	return $copy;
 }
 
+
+=head2  if ($color->equals($color2)) { ... }
+Checks if another color is the same as this one.  Optionally takes an accuracy parameter which is the distance between the two colors as measured by the city-block metric in XYZ space (default accuracy is 0.01%).
+=cut 
+
 sub equals
 {
 	my ($this, $other, %opts) = @_;
@@ -565,20 +643,103 @@ sub equals
 	else { return 0; }
 }
 
+=head2  $d = $color->difference($color2)
+Calculates the difference between this color and another one.  The difference measure is (approximately) perceptually uniform.
+=cut 
+
+sub difference
+{
+	my ($this, $other) = @_;
+	return $this->difference_CIE1976($other);
+}
+
+# reference: http://www.brucelindbloom.com/index.html?Eqn_DeltaE_CIE76.html
+sub difference_CIE1976
+{
+	my ($this, $other) = @_;
+	
+	my ($L1, $a1, $b1) = @{ $this->as_Lab() };
+	my ($L2, $a2, $b2) = @{ $other->as_Lab() };
+	
+	my $deltaE = sqrt(&_sqr($L1-$L2) + &_sqr($a1-$a2) + &_sqr($b1-$b2));
+	
+	return $deltaE;
+}
+
+sub difference_CIE1994
+{
+	# TODO
+}
+
+# reference: http://www.brucelindbloom.com/index.html?Eqn_DeltaE_CMC.html
+sub difference_CMC
+{
+	my ($this, $other, %opts) = @_;
+
+	my $l = $opts{l} || 1;
+	my $c = $opts{c} || 1;
+	
+	my ($L1, $a1, $b1) = @{ $this->as_Lab() };
+	my ($L2, $a2, $b2) = @{ $other->as_Lab() };
+
+	my $C1 = sqrt($a1*$a1 + $b1*$b1);
+	my $C2 = sqrt($a2*$a2 + $b2*$b2);
+
+	my $dH = sqrt(&_sqr($a1-$a2) + &_sqr($b1-$b2) - &_sqr($C1-$C2));
+
+	my $SL = ($L1 < 16 ? 
+			  0.511 : 
+			  0.040975 * $L1 / ( 1 + 0.01765 * $L1)
+			  );
+
+	my $SC = 0.638 + 0.0638 * $C1 / ( 1 + 0.0131 * $C1 );
+
+	my $F = sqrt(pow($C1, 4) / ( pow($C1, 4) + 1900 ));
+
+	my $H1 = atan2($b1, $a1);
+
+	my $T = ((deg2rad(164) <= $H1 && $H1 <= deg2rad(345)) ? 
+			 0.56 + abs(0.2 * cos($H1 + deg2rad(168))) :
+			 0.36 + abs(0.4 * cos($H1 + deg2rad(35)))
+			 );
+
+	my $SH = $SC * ($F*$T - $F + 1);
+	
+	my $deltaE = sqrt(&_sqr(($L1 - $L2)/($l * $SL)) + 
+					  &_sqr(($C1 - $C2)/($c * $SC)) + 
+					  &_sqr($dH/$SH)
+					  );
+
+	return $deltaE;
+}
+
+=head2  @colorspaces = &Graphics::ColorObject->list_colorspaces()
+Returns a list of all supported colorspaces.
+=cut 
+
 sub list_colorspaces
 {
-	return qw(RGB XYZ xyY Lab LCHab Luv LCHuv YCbCr YPbPr HSV); # HSL is buggy; YUV YIQ not yet implemented
+	return qw(RGB XYZ xyY Lab LCHab Luv LCHuv HSL HSV CMY CMYK YCbCr YPbPr YUV YIQ); # PhotoYCC
 }
+
+=head2  @rgb_spaces = &Graphics::ColorObject->list_rgb_spaces()
+Returns a list of all supported RGB spaces.  Some items are aliases, so the same space may be listed more than once under different names.
+=cut 
 
 sub list_rgb_spaces
 {
 	return sort keys %RGB_SPACES;
 }
 
+=head2  @white_points = &Graphics::ColorObject->list_white_points()
+Returns a list of all supported white points.
+=cut 
+
 sub list_white_points
 {
 	return sort keys %WHITE_POINTS;
 }
+
 
 ############# non-OO interface ###########
 
@@ -586,10 +747,10 @@ sub RGB_to_RGB255
 {
 	my ($rgb) = @_;
 	my ($r, $g, $b) = @{$rgb};
-	#if ($r < 0 || $g < 0 || $b < 0 || $r > 1 || $g > 1 || $b > 1) { $r = 0; $g = 0; $b = 0; }
 	if ($r < 0) { $r = 0; } elsif ($r > 1) { $r = 1; }
 	if ($g < 0) { $g = 0; } elsif ($g > 1) { $g = 1; }
 	if ($b < 0) { $b = 0; } elsif ($b > 1) { $b = 1; }
+	# FIXME use round, not sprintf
 	return [ sprintf('%.0f', 255*$r), sprintf('%.0f', 255*$g), sprintf('%.0f', 255*$b) ];
 }
 
@@ -945,14 +1106,60 @@ sub linear_RGB_to_RGB
 	return [ $R, $G, $B ];
 }
 
+# reference: http://en.wikipedia.org/wiki/YIQ
+sub RGB_to_YIQ
+{
+	my ($rgb) = @_; # input should be CIE Rec 601/NTSC non-linear rgb
+	my $m     = [[0.299     ,  0.587     ,  0.114     ],
+				 [0.59590059, -0.27455667, -0.32134392],
+				 [0.21153661, -0.52273617,  0.31119955]];
+
+	my $yiq = &_mult_m33_v3($m, $rgb);
+	return $yiq;
+}
+
+sub YIQ_to_RGB
+{
+	my ($yiq) = @_;
+	my $mstar = [[ 1.0     ,  0.95598634,  0.6208248 ],
+				 [ 1.0     , -0.27201283, -0.64720424],
+				 [ 1.0     , -1.1067402 ,  1.7042305 ]];
+
+	my $rgb = &_mult_m33_v3($mstar, $yiq);
+	return $rgb; # result is NTSC non-linear rgb
+}
+
+sub RGB_to_YUV
+{
+	my ($rgb) = @_; # input should be CIE Rec 601/NTSC non-linear rgb
+	my $m     = [[ 0.299     ,  0.587     ,  0.114      ],
+				 [-0.14714119, -0.28886916,  0.43601035 ],
+				 [ 0.61497538, -0.51496512, -0.10001026 ]];
+
+	my $yuv = &_mult_m33_v3($m, $rgb);
+	return $yuv;
+}
+
+sub YUV_to_RGB
+{
+	my ($yuv) = @_;
+	my $mstar = [[ 1.0,  0.0       ,  1.139883   ],
+				 [ 1.0, -0.39464233, -0.58062185],
+				 [ 1.0,  2.0320619 ,  0.0       ]];
+
+	my $rgb = &_mult_m33_v3($mstar, $yuv);
+	return $rgb; # result is NTSC non-linear rgb
+}
 
 # reference: http://www.poynton.com/notes/colour_and_gamma/ColorFAQ.txt
+# Y is [0..1], Pb and Pr are [-0.5..0.5]
 sub RGB_to_YPbPr
 {
 	my ($rgb) = @_; # input should be CIE Rec 601/NTSC non-linear rgb
 	my $m     = [[ 0.299   , 0.587   , 0.114   ],
 				 [-0.168736,-0.331264, 0.5     ],
 				 [ 0.5     ,-0.418688,-0.081312]];
+
 	my $ypbpr = &_mult_m33_v3($m, $rgb);
 	return $ypbpr;
 }
@@ -960,22 +1167,23 @@ sub RGB_to_YPbPr
 sub YPbPr_to_RGB
 {
 	my ($ypbpr) = @_;
-	my $mstar = [[ 1.      , 0.0     , 1.402   ],
-				 [ 1.      ,-0.344136,-0.714136],
-				 [ 1.      , 1.772   , 0.0     ]];
+	my $mstar = [[ 1.0     , 0.0     , 1.402   ],
+				 [ 1.0     ,-0.344136,-0.714136],
+				 [ 1.0     , 1.772   , 0.0     ]];
 
 	my $rgb = &_mult_m33_v3($mstar, $ypbpr);
 	return $rgb; # result is NTSC non-linear rgb
 }
 
+# Y is [16..235], Cb and Cr are [16..239]
 sub RGB_to_YCbCr
 {
 	my ($rgb) = @_; # input should be NTSC non-linear rgb
 	my $m = [[    65.481,   128.553,    24.966],
-			 [   -37.797,   -74.203,   112.   ],
-			 [   112.   ,   -93.786,   -18.214]];
+			 [   -37.797,   -74.203,   112.0  ],
+			 [   112.0  ,   -93.786,   -18.214]];
+
 	my $ycbcr = &_add_v3( &_mult_m33_v3($m, $rgb), [ 16, 128, 128 ] );
-	# TODO need to clip values of 0 and 255
 	return $ycbcr;
 }
 
@@ -985,8 +1193,36 @@ sub YCbCr_to_RGB
 	my $mstar = [[ 0.00456621, 0.0       , 0.00625893],
 				 [ 0.00456621,-0.00153632,-0.00318811],
 				 [ 0.00456621, 0.00791071, 0.0       ]];
+
 	my $rgb = &_mult_m33_v3($mstar, &_add_v3($ycbcr, [-16, -128, -128]));
 	return $rgb;
+}
+
+# reference: http://wwwde.kodak.com/global/en/professional/products/storage/pcd/techInfo/pcd-045.jhtml
+sub RGB_to_PhotoYCC
+{
+	my ($rgb) = @_; # input should be CIE Rec 709 non-linear rgb
+	my $m     = [[ 0.299     ,  0.587     ,  0.114      ],
+				 [-0.299     , -0.587     ,  0.866      ],
+				 [ 0.701     , -0.587     , -0.114      ]];
+	my $ycc = 
+		&_add_v3([0, 156, 137], 
+				 &_mult_m33_v3([[255/1.402, 0, 0], [0, 111.40, 0], [0, 0, 135.64]], 
+							   &_mult_m33_v3($m, $rgb)));
+	return $ycc;
+}
+
+sub PhotoYCC_to_RGB
+{
+	my ($ycc) = @_;
+	my $mstar = [[ 1.0       ,   0.0       ,   1.0       ],
+				 [ 0.99603657,  -0.19817126,  -0.50936968],
+				 [ 1.0204082 ,   1.0204082 ,   0.0       ]];
+
+	my $rgb = &_mult_m33_v3($mstar, 
+							&_mult_m33_v3([[1/(255/1.402), 0, 0], [0, 1/111.40, 0], [0, 0, 1/135.64]], 
+										  &_add_v3([0, -156, -137], $ycc)));
+	return $rgb; # result is CIE 709 non-linear rgb
 }
 
 sub RGB_to_HSV
@@ -1036,15 +1272,14 @@ sub HSV_to_RGB
 	my ($h, $s, $v)=@{$hsv};
 	my ($r, $g, $b);
 
-	if( $s == 0 )
-	{
-		# TODO make this truly achromatic
-		return [ $v, $v, $v ];
-	}
+	# force $h to 0 <= $h < 360
+	# FIXME should not loop, looks infinite
+	while ($h < 0) { $h += 360; }
+	while ($h >= 360) { $h -= 360; }
 
 	$h /= 60;                       ## sector 0 to 5
 	my $i = POSIX::floor( $h );
-	my $f = $h - $i;                   ## factorial part of h
+	my $f = $h - $i;                   ## fractional part of h
 	my $p = $v * ( 1 - $s );
 	my $q = $v * ( 1 - $s * $f );
 	my $t = $v * ( 1 - $s * ( 1 - $f ) );
@@ -1110,11 +1345,11 @@ sub RGB_to_HSL
 	{
 		if($l <= 0.5)
 		{
-			$s = $delta/($max+$min);
+			$s = $delta/($max+$min); # FIXME possible divide-by-zero
 		}
 		else
 		{
-			$s = $delta/(2-$max-$min);
+			$s = $delta/(2-$max-$min); # FIXME possible divide-by-zero
 		}
 	}
 	return [$h, $s, $l];
@@ -1129,33 +1364,30 @@ sub HSL_to_RGB
 
 	if( $l <= 0.5 )
 	{
-		$p2 = $l * (1+$s);
+		$p1 = $l * (1-$s);
+		$p2 = 2*$l - $p1;
 	}
 	else
 	{
 		$p2 = $l + $s - ($l*$s);
+		$p1 = 2*$l - $p2;
 	}
 	
-	$p1 = 2*$l - $p2;
-	if( $s == 0 )
-	{
-		# TODO make truly achromatic
-		$r = $l; $g = $l; $b = $l; 
-	}
-	else
-	{
-		$r = &_rgbquant($p1, $p2, $h+120);
-		$g = &_rgbquant($p1, $p2, $h);
-		$b = &_rgbquant($p1, $p2, $h-120);
-	}
+	$r = &_rgbquant($p1, $p2, $h+120);
+	$g = &_rgbquant($p1, $p2, $h);
+	$b = &_rgbquant($p1, $p2, $h-120);
 	
 	return [ $r, $g, $b ];
 }
 
 sub _rgbquant {
 	my ($q1, $q2, $h) = @_;
+
+	# force $h to 0 <= $h < 360
+	# FIXME should not loop, looks infinite
 	while ($h < 0) { $h += 360; }
-	$h %= 360;
+	while ($h >= 360) { $h -= 360; }
+
 	if ($h < 60)
 	{
 		return ($q1 + (($q2-$q1)*$h/60) );
@@ -1228,6 +1460,38 @@ sub XYZ_change_white_point
 	return $xyz_new;
 }
 
+# reference: http://www.brucelindbloom.com/index.html?Eqn_T_to_xy.html
+sub white_point_from_temperature
+{
+	my ($temp) = @_;
+	my ($x, $y);
+
+	if ($temp < 4000 || $temp > 25000)
+	{
+		carp "color temperature out of range: $temp, should be between 4000 and 25000 Kelvin";
+	}
+
+	if ($temp <= 7000)
+	{
+		$x = -4.6070e+9 / ($temp*$temp*$temp) + 
+			2.9678e+6   / ($temp*$temp) +
+			0.09911e+3  / $temp +
+			0.244063;
+	}
+	else # $temp > 7000
+	{
+		$x = -2.0064e+9 / ($temp*$temp*$temp) + 
+			1.9018e+6   / ($temp*$temp) +
+			0.24748e+3  / $temp +
+			0.237040;
+	}
+
+	$y = -3.0 * $x * $x + 2.87 * $x - 0.275;
+
+	return [ $x, $y ];
+}
+
+
 ######### private utility functions ########
 
 sub _get_RGB_space_by_name
@@ -1264,6 +1528,12 @@ sub _check_white_point
 		# carp("no white point specified in operation that requires it, defaulting to D65");
 		$white_point = 'D65';
 	}
+	elsif ($white_point =~ m!^(\d+)K$!)
+	{
+		my $temperature = $1;
+		#$white_point = $temperature.'K'; # already in that form
+		$WHITE_POINTS{ $white_point } = &white_point_from_temperature($temperature);
+	}
 	elsif (! $WHITE_POINTS{ $white_point })
 	{
 		carp("white point not found: ". $white_point.", defaulting to D65");
@@ -1272,7 +1542,6 @@ sub _check_white_point
 
 	return $white_point;
 }
-
 
 sub _mult_v3_m33
 {
@@ -1338,12 +1607,30 @@ sub _delta_v3
 			abs($a3->[2] - $b3->[2]) );
 }
 
+sub _generic_clip
+{
+	my ($v3, $c32) = @_;
+	if ($v3->[0] < $c32->[0]->[0]) { $v3->[0] = $c32->[0]->[0]; }
+	if ($v3->[0] > $c32->[0]->[1]) { $v3->[0] = $c32->[0]->[1]; }
+	if ($v3->[1] < $c32->[1]->[0]) { $v3->[1] = $c32->[1]->[0]; }
+	if ($v3->[1] > $c32->[1]->[1]) { $v3->[1] = $c32->[1]->[1]; }
+	if ($v3->[2] < $c32->[2]->[0]) { $v3->[2] = $c32->[2]->[0]; }
+	if ($v3->[2] > $c32->[2]->[1]) { $v3->[2] = $c32->[2]->[1]; }
+	return $v3;
+}
+
 sub _apow
 {
 	my ($v, $p) = @_;
 	return ($v >= 0 ?
 			pow($v, $p) : 
 			-pow(-$v, $p));
+}
+
+sub _sqr
+{
+	my ($v) = @_;
+	return $v*$v;
 }
 
 sub _is_zero
@@ -1470,16 +1757,21 @@ mstar => [ [  1.4628087611158722, -0.5217931929785991,  0.0349338148323482 ], [ 
 );
 
 # reference: http://www.aim-dtp.net/aim/technology/cie_xyz/cie_xyz.htm
+# reference: Wyszecki, G. and Stiles, W. S. Color Science Concepts and Methods, Wiley (2000). ISBN 0471399183
+# based on CIE1931 (2 degree FOV)
 our %WHITE_POINTS = (
-'A'   => [ 0.4476,   0.4074   ], # Tungsten lamp
-'D50' => [ 0.3457,   0.3585   ], # Bright tungsten
-'B'   => [ 0.3484,   0.3516   ], # CIE Std illuminant B
-'D55' => [ 0.3324,   0.3474   ], # Cloudy daylight
+'A'   => [ 0.44757,  0.40745  ], # Tungsten lamp 2856K
+'D50' => [ 0.34567,  0.35850  ], # Bright tungsten
+'B'   => [ 0.34842,  0.35161  ], # CIE Std illuminant B
+'D55' => [ 0.33242,  0.34743  ], # Cloudy daylight
 'E'   => [ 0.333333, 0.333333 ], # Normalized reference source
-'D65' => [ 0.312713, 0.329016 ], # Daylight
-'C'   => [ 0.310063, 0.316158 ], # Average Sunlight
-'D75' => [ 0.299,    0.3149   ], # ?
-'D93' => [ 0.2848,   0.2932   ], # old CRT monitors
+'D65' => [ 0.312713, 0.329016 ], # Daylight 6504K
+'C'   => [ 0.310063, 0.316158 ], # North daylight 6774K
+'D75' => [ 0.29902,  0.31485  ], # 7500K
+'D93' => [ 0.28480,  0.29320  ], # old CRT monitors
+'F2'  => [ 0.37207,  0.37512  ], # Cool white fluorescent 4200K
+'F7'  => [ 0.31285,  0.32918  ], # Narrow daylight fluorescent 6500K
+'F11' => [ 0.38054,  0.37691  ], # Narrow white fluorescent
 );
 
 
@@ -1487,21 +1779,43 @@ our %WHITE_POINTS = (
 
 =head2 EXPORT
 
-None by default.  The 'all' tag causes the non-object-oriented interface to be exported, and you get all the XXX_to_YYY functions, for example RGB_to_XYZ.  Please note that many of these functions need extra arguments in addition to the color value to be converted.
+None by default.  The 'all' tag causes the non-object-oriented interface to be exported, and you get all the XXX_to_YYY functions, for example RGB_to_XYZ.  Please note that some of these functions need extra arguments in addition to the color value to be converted.
 
 =head1 BUGS
 
-Backwards compatibility with the previous version is not very well tested.
+Backwards compatibility with versions before 0.4 is not very well tested.
 
-Some color transformations are not exactly reversible.  In particular, conversions between different white points are almost but not exactly reversible.
+This module will produce results that are, in some cases, different from other software.  Most of the time that is not a bug in this module, but rather a case where the other software uses an approximate (trading accuracy for speed) algorithm.  That is particularly true for YUV and related conversions which are often implemented using integer-math approximations.  As far as possible, this module produces results which are exact according to the definitions in the relevant CIE/ITU or other standards.
 
-There is no way to choose a white point or RGB space other than the built-in ones.
+Some color transformations are not exactly reversible.  In particular, conversions between different white points are almost but not exactly reversible.  This is not a bug.
 
-There is no way to choose any other color-adaptation algorithm than the Bradford algorithm. 
+There is no way to choose any other color-adaptation algorithm than the Bradford algorithm.  That is probably ok since the Bradford algorithm is better than other algorithms (such as Von Kries or simple scaling).
 
-There is no way to check whether a value is within gamut for a particular space.
+There is no way to choose a RGB space other than the built-in ones.
 
-Support for CMYK is very basic, it relies on assumptions that completely do not work in the physical world.  If you tried to convert an image to CMYK for printing using these functions, the results will not be very good, to say the least.
+Support for CMYK is very basic, it relies on assumptions that completely do not work in the physical world of subtractive pigment mixtures.  If you tried to convert an image to CMYK directly for printing using these functions, the results will not be very good, to say the least.
+
+
+=head1 TODO
+
+Add clipping to gamut for every color space.
+
+Choose between several clipping algorithms (nearest, luminance-preserving, hue-preserving).
+
+Add a simpler way to check whether something is within gamut.
+
+Add user-defined RGB spaces.
+
+Calculate RGB matrices from chromaticity coordinates.
+
+Only load non-RGB matrices once at startup.
+
+Add colorspaces: uvw, YOZ, RYB, others?
+
+Add RGB spaces: ROMM, others?
+
+Convert arrays of colors efficiently (maybe someday in C).
+
 
 =head1 SEE ALSO
 
@@ -1531,7 +1845,7 @@ Timo Autiokari E<lt>timo.autiokari@aim-dtp.netE<gt> for information on white poi
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright 2003-2004 by Alex Izvorski
+Copyright 2003-2005 by Alex Izvorski
 
 Portions Copyright 2001-2003 by Alfred Reibenschuh
 
@@ -1565,7 +1879,7 @@ sub asCMY { my ($this) = @_; return @{$this->as_CMY()}; }
 sub asCMYK { my ($this) = @_; return @{$this->as_CMYK()}; }
 sub asCMYK2 { my ($this) = @_; return @{$this->as_CMYK()}; } # slightly different results
 sub asCMYK3 { my ($this) = @_; return (map { $_*0.75 } @{$this->as_CMYK()}); }
-sub asHex { my ($this) = @_; return $this->as_RGBhex(); }
+sub asHex { my ($this) = @_; return '#'.$this->as_RGBhex(); }
 sub asHexCMYK { my ($this) = @_; return sprintf('%%%02X%02X%02X%02X', map {$_*255} $this->asCMYK()); }
 sub asHexHSV { my ($this) = @_; return sprintf('!%02X%02X%02X', map {$_*255} $this->asHSV()); }
 sub setRGB { my ($this, @c) = @_; %{$this} = %{&newRGB(ref $this, @c)}; }
