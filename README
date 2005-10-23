@@ -1,32 +1,20 @@
-Graphics/ColorObject version 0.4a4
+Graphics/ColorObject version 0.5.0
 ============================
-
-
-UPGRADING FROM 0.3a2 AND OLDER VERSIONS
-
-This version is a complete rewrite since the previous version, 0.3a2.
-The API is completely changed.  The old API should be emulated, but
-that has not been tested as extensively as I'd like. Therefore, please
-test any code that uses this module when upgrading. If you encounter
-any strange behavior, please downgrade to 0.3a2 and email me a bug
-report.  Additionally, the exact values returned by some functions may
-be slightly different, this is not a bug - the new values are (more)
-correct.  
-
 
 QUICK START
 
-Convert from one color space to another:
+Convert from one color space to another, from example from RGB 
+to HSV (Hue-Saturation-Value):
 
 use Graphics::ColorObject;
 ($h, $s, $v) = @{ Graphics::ColorObject->new_RGB([$r, $g, $b])->as_HSV() };
 
 You can convert between any of these color spaces: XYZ, xyY, Lab,
-LCHab, RGB, YPbPr, YCbCr.
+LCHab, RGB, HSL, HSV, CMY, CMYK, YPbPr, YCbCr, YUV, YIQ, PhotoYCC.
 
 For more detailed info, type:
 
-perldoc ColorObject.pm
+   perldoc ColorObject.pm
 
 
 INSTALLATION
@@ -46,8 +34,8 @@ Graphics::ColorNames
 
 COPYRIGHT AND LICENCE
 
-Copyright 2003-2004 by Alex Izvorski 
-(portions Copyright by Alfred Reibenschuh)
+Copyright 2003-2005 by Alex Izvorski 
+(Portions Copyright 2001-2003 by Alfred Reibenschuh)
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself. 
