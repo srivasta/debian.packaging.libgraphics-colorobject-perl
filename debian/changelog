@@ -1,3 +1,11 @@
+libgraphics-colorobject-perl (0.5.0-6) unstable; urgency=low
+
+  * Bug fix: "warnings with Perl 5.14", thanks to Herwin Weststrate. This
+    time, actually do include the code changes required to close this out.
+    (Closes: #724293).
+
+ -- Manoj Srivastava <srivasta@debian.org>  Sat, 12 Apr 2014 16:16:11 -0700
+
 libgraphics-colorobject-perl (0.5.0-5) unstable; urgency=low
 
   * Updated to new dh based build system
