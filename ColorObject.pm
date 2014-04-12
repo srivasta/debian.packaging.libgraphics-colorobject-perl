@@ -1902,7 +1902,9 @@ our %COLORNAMES;
 tie %COLORNAMES, 'Graphics::ColorNames', qw(HTML Windows Netscape X);
 
 sub namecolor {
-	my $name=lc(shift @_);
+	my $name=shift;
+	return unless $name;
+	$name=lc $name;
 	$name=~s/[^\#!%\&a-z0-9]//g;
 	my $col;
 	my $opt=shift @_;
