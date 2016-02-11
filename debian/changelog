@@ -1,3 +1,12 @@
+libgraphics-colorobject-perl (0.5.0-7) unstable; urgency=low
+
+  * Updated the watch file
+  * Updated the standards version (no changes needed)
+  * Moved the VCS-* fields in the control file to HTTPS.
+  * Moved to source format 1.0 and dgit
+
+ -- Manoj Srivastava <srivasta@debian.org>  Thu, 11 Feb 2016 14:28:09 -0800
+
 libgraphics-colorobject-perl (0.5.0-6) unstable; urgency=low
 
   * Bug fix: "warnings with Perl 5.14", thanks to Herwin Weststrate. This

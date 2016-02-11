@@ -1,5 +1,4 @@
 # format version number, currently 2; this line is compulsory!
-version=2
+version=3
 
-http://www.cpan.org/modules/by-module/Graphics/Graphics-ColorObject-(.*)\.tar\.gz debian
-
+https://metacpan.org/release/Graphics-ColorObject   .*/Graphics-ColorObject-v?(\d[\d.-]+)\.(?:tar(?:\.gz|\.bz2)?|tgz|zip)$ debian

@@ -1,12 +1,13 @@
 Source: libgraphics-colorobject-perl
-VCS-Git: git://anonscm.debian.org/users/srivasta/debian/libgraphics-colorobject-perl.git
-VCS-Browser: http://anonscm.debian.org/gitweb/?p=users/srivasta/debian/libgraphics-colorobject-perl.git
+VCS-Git: https://anonscm.debian.org/git/users/srivasta/debian/libgraphics-colorobject-perl.git
+VCS-Browser: https://anonscm.debian.org/gitweb/?p=users/srivasta/debian/libgraphics-colorobject-perl.git
 Priority: optional
 Section: perl
 Homepage: http://search.cpan.org/~aizvorski/Graphics-ColorObject-0.5.0/ColorObject.pm
 Maintainer: Manoj Srivastava <srivasta@debian.org>
-Standards-Version: 3.9.5
-Build-Depends-Indep: perl-modules, libgraphics-colornames-perl, debhelper (>= 9.0.0)
+Standards-Version: 3.9.7
+Build-Depends-Indep: perl, libmodule-build-perl, perl-modules-5.22 | libmodule-load-perl,
+                     libgraphics-colornames-perl, debhelper (>= 9.0.0)
 
 Package: libgraphics-colorobject-perl
 Architecture: all
