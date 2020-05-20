@@ -1,3 +1,12 @@
+libgraphics-colorobject-perl (0.5.0-8) unstable; urgency=medium
+
+  * Ack NMU (Thanks, Andreas Tille)
+  * Update VCS location
+  * Update standards vereion to 4.3.0 (no changes needed)
+  * Updated the debhelpre compat build dependency
+
+ -- Manoj Srivastava <srivasta@debian.org>  Tue, 19 May 2020 19:07:42 -0700
+
 libgraphics-colorobject-perl (0.5.0-7.1) unstable; urgency=medium
 
   * Non-maintainer upload.
