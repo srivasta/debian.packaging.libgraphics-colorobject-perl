@@ -1,17 +1,18 @@
 Source: libgraphics-colorobject-perl
-VCS-Git: https://anonscm.debian.org/git/users/srivasta/debian/libgraphics-colorobject-perl.git
-VCS-Browser: https://anonscm.debian.org/gitweb/?p=users/srivasta/debian/libgraphics-colorobject-perl.git
+VCS-Git: https://salsa.debian.org/srivasta/libgraphics-colorobject-perl.git
+VCS-Browser: https://salsa.debian.org/srivasta/libgraphics-colorobject-perl.git
 Priority: optional
 Section: perl
 Homepage: http://search.cpan.org/~aizvorski/Graphics-ColorObject-0.5.0/ColorObject.pm
 Maintainer: Manoj Srivastava <srivasta@debian.org>
-Standards-Version: 3.9.7
-Build-Depends-Indep: perl, libmodule-build-perl, perl-modules-5.22 | libmodule-load-perl,
-                     libgraphics-colornames-perl, debhelper (>= 9.0.0)
+Standards-Version: 4.3.0
+Build-Depends: debhelper-compat (=12)
+Build-Depends-Indep: perl, libmodule-build-perl, libmodule-load-perl,
+                     libgraphics-colornames-perl
 
 Package: libgraphics-colorobject-perl
 Architecture: all
-Depends: ${misc:Depends}, perl, libgraphics-colornames-perl
+Depends: ${misc:Depends}, ${perl:Depends}, libgraphics-colornames-perl
 Description: convert color specifications between color spaces
  Use this package to convert between all the common color spaces. As a
  pure Perl module, it is not very fast, and so it you want to convert
