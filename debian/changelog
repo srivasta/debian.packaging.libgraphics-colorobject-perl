@@ -1,3 +1,13 @@
+libgraphics-colorobject-perl (0.5.0-9) unstable; urgency=medium
+
+  * The new libgraphics-colornames-perl has split out the HTML colors into
+    a separate module, and the Windows and netscape colors went
+    away. Adjusted accordingly.
+  * Bug fix: "broken by new libgraphics-colornames-perl", thanks to Niko
+    Tyni (Closes: #961148).
+
+ -- Manoj Srivastava <srivasta@debian.org>  Wed, 20 May 2020 19:32:47 -0700
+
 libgraphics-colorobject-perl (0.5.0-8) unstable; urgency=medium
 
   * Ack NMU (Thanks, Andreas Tille)

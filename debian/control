@@ -8,7 +8,7 @@ Maintainer: Manoj Srivastava <srivasta@debian.org>
 Standards-Version: 4.3.0
 Build-Depends: debhelper-compat (=12)
 Build-Depends-Indep: perl, libmodule-build-perl, libmodule-load-perl,
-                     libgraphics-colornames-perl
+                     libgraphics-colornames-perl, libgraphics-colornames-www-perl
 
 Package: libgraphics-colorobject-perl
 Architecture: all
