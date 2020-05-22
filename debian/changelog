@@ -1,3 +1,11 @@
+libgraphics-colorobject-perl (0.5.0-10) unstable; urgency=medium
+
+  * It is not HTML anymore, it is WWW,
+  * Bug fix: "FTBFS: Cannot load color naming scheme module
+    Graphics::ColorNames::HTML", thanks to Niko Tyni (Closes: #961207).
+
+ -- Manoj Srivastava <srivasta@debian.org>  Fri, 22 May 2020 02:13:44 -0700
+
 libgraphics-colorobject-perl (0.5.0-9) unstable; urgency=medium
 
   * The new libgraphics-colornames-perl has split out the HTML colors into

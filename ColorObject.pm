@@ -13,7 +13,7 @@ Graphics::ColorObject - convert between color spaces
 
 =head1 SYNOPSIS
 
-  use Graphics::ColorObject;
+use Graphics::ColorObject;
 
   # rgb to hsv
   $color = Graphics::ColorObject->new_RGB([$r, $g, $b]);
@@ -2093,7 +2093,7 @@ use Graphics::ColorNames;
 use Graphics::ColorNames::WWW;
 
 our %COLORNAMES;
-tie %COLORNAMES, 'Graphics::ColorNames', qw(HTML X);
+tie %COLORNAMES, 'Graphics::ColorNames', qw(WWW X);
 
 sub namecolor {
   my $name = shift;
